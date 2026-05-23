@@ -6,3 +6,8 @@ export {
   default as writeError,
   serializeContent
 } from './writeError.js'
+export { createPrint } from './print.js'
+export {
+  default as welcomeMessage,
+  type WelcomeOptions
+} from './welcome.js'

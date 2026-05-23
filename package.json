@@ -39,6 +39,34 @@
       "types": "./dist/formatting/index.d.ts",
       "import": "./dist/formatting/index.js"
     },
+    "./framework": {
+      "types": "./dist/framework/index.d.ts",
+      "import": "./dist/framework/index.js"
+    },
+    "./framework/*": {
+      "types": "./dist/framework/*.d.ts",
+      "import": "./dist/framework/*.js"
+    },
+    "./framework/middlewares/*": {
+      "types": "./dist/framework/middlewares/*.d.ts",
+      "import": "./dist/framework/middlewares/*.js"
+    },
+    "./framework/context": {
+      "types": "./dist/framework/context/index.d.ts",
+      "import": "./dist/framework/context/index.js"
+    },
+    "./framework/context/json/*": {
+      "types": "./dist/framework/context/json/*.d.ts",
+      "import": "./dist/framework/context/json/*.js"
+    },
+    "./framework/context/params/*": {
+      "types": "./dist/framework/context/params/*.d.ts",
+      "import": "./dist/framework/context/params/*.js"
+    },
+    "./framework/context/query/*": {
+      "types": "./dist/framework/context/query/*.d.ts",
+      "import": "./dist/framework/context/query/*.js"
+    },
     "./network": {
       "types": "./dist/network/index.d.ts",
       "import": "./dist/network/index.js"
@@ -101,18 +129,34 @@
     "pretty": "prettier --write \"./src/**/*.{js,ts,json}\""
   },
   "dependencies": {
+    "chalk": "^5.6.2",
     "jose": "^6.2.2",
     "nanoid": "^5.1.7"
   },
   "peerDependencies": {
     "@hono/zod-openapi": "^0.19.0",
+    "@scalar/hono-api-reference": "^0.5.0",
     "hono": "^4.0.0",
+    "ioredis": "^5.0.0",
     "zod": "^3.25.0"
   },
+  "peerDependenciesMeta": {
+    "@scalar/hono-api-reference": {
+      "optional": true
+    },
+    "ioredis": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@hono/zod-openapi": "^0.19.10",
+    "@scalar/hono-api-reference": "^0.5.184",
     "@types/bun": "latest",
+    "hono": "^4.12.9",
+    "ioredis": "^5.10.1",
     "prettier": "^3.8.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "^3.25.76"
   },
   "publishConfig": {
     "access": "public"
