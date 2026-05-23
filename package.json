@@ -59,6 +59,7 @@
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
     "clean": "rm -rf dist",
+    "prepare": "bun run build",
     "prepublishOnly": "bun run clean && bun run build",
     "lint": "bunx oxlint@latest --fix --ignore-pattern 'node_modules/**' --ignore-pattern 'dist/**'",
     "pretty": "prettier --write \"./src/**/*.{js,ts,json}\""
