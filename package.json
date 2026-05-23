@@ -19,9 +19,17 @@
       "types": "./dist/data/index.d.ts",
       "import": "./dist/data/index.js"
     },
+    "./data/*": {
+      "types": "./dist/data/*.d.ts",
+      "import": "./dist/data/*.js"
+    },
     "./decorators": {
       "types": "./dist/decorators/index.d.ts",
       "import": "./dist/decorators/index.js"
+    },
+    "./decorators/*": {
+      "types": "./dist/decorators/*.d.ts",
+      "import": "./dist/decorators/*.js"
     },
     "./errors": {
       "types": "./dist/errors/index.d.ts",
@@ -39,12 +47,40 @@
       "types": "./dist/openapi/index.d.ts",
       "import": "./dist/openapi/index.js"
     },
+    "./openapi/helpers": {
+      "types": "./dist/openapi/helpers/index.d.ts",
+      "import": "./dist/openapi/helpers/index.js"
+    },
+    "./openapi/helpers/*": {
+      "types": "./dist/openapi/helpers/*.d.ts",
+      "import": "./dist/openapi/helpers/*.js"
+    },
+    "./openapi/schemas": {
+      "types": "./dist/openapi/schemas/index.d.ts",
+      "import": "./dist/openapi/schemas/index.js"
+    },
+    "./openapi/schemas/*": {
+      "types": "./dist/openapi/schemas/*.d.ts",
+      "import": "./dist/openapi/schemas/*.js"
+    },
+    "./openapi/default-hook": {
+      "types": "./dist/openapi/default-hook.d.ts",
+      "import": "./dist/openapi/default-hook.js"
+    },
     "./polyfill/compression": {
       "import": "./dist/polyfill/compression.js"
     },
     "./security": {
       "types": "./dist/security/index.d.ts",
       "import": "./dist/security/index.js"
+    },
+    "./security/*": {
+      "types": "./dist/security/*.d.ts",
+      "import": "./dist/security/*.js"
+    },
+    "./network/*": {
+      "types": "./dist/network/*.d.ts",
+      "import": "./dist/network/*.js"
     },
     "./utils": {
       "types": "./dist/utils/index.d.ts",
