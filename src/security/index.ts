@@ -15,9 +15,3 @@ export {
   default as getDummyPasswordHash,
   getDummyPasswordHash as getDummyPasswordHashFn
 } from './getDummyPasswordHash.js'
-export {
-  createLoginAttempts,
-  type LoginAttemptsOptions,
-  type LoginAttemptsApi,
-  type LoginAttemptContext
-} from './loginAttempts.js'
