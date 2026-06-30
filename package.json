@@ -1,6 +1,6 @@
 {
   "name": "hono-foga",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Shared toolkit for Hono based services: OpenAPI helpers, decorators, status codes, validation and small utilities.",
   "type": "module",
   "main": "./dist/index.js",
@@ -39,6 +39,10 @@
       "types": "./dist/formatting/index.d.ts",
       "import": "./dist/formatting/index.js"
     },
+    "./formatting/*": {
+      "types": "./dist/formatting/*.d.ts",
+      "import": "./dist/formatting/*.js"
+    },
     "./framework": {
       "types": "./dist/framework/index.d.ts",
       "import": "./dist/framework/index.js"
@@ -46,6 +50,10 @@
     "./framework/*": {
       "types": "./dist/framework/*.d.ts",
       "import": "./dist/framework/*.js"
+    },
+    "./framework/middlewares": {
+      "types": "./dist/framework/middlewares/index.d.ts",
+      "import": "./dist/framework/middlewares/index.js"
     },
     "./framework/middlewares/*": {
       "types": "./dist/framework/middlewares/*.d.ts",
@@ -114,9 +122,21 @@
       "types": "./dist/utils/index.d.ts",
       "import": "./dist/utils/index.js"
     },
+    "./utils/*": {
+      "types": "./dist/utils/*.d.ts",
+      "import": "./dist/utils/*.js"
+    },
+    "./errors/*": {
+      "types": "./dist/errors/*.d.ts",
+      "import": "./dist/errors/*.js"
+    },
     "./validation": {
       "types": "./dist/validation/index.d.ts",
       "import": "./dist/validation/index.js"
+    },
+    "./validation/*": {
+      "types": "./dist/validation/*.d.ts",
+      "import": "./dist/validation/*.js"
     }
   },
   "scripts": {
@@ -134,6 +154,7 @@
     "nanoid": "^5.1.7"
   },
   "peerDependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.0.0",
     "@hono/zod-openapi": "^0.19.0",
     "@scalar/hono-api-reference": "^0.5.0",
     "hono": "^4.0.0",
@@ -145,10 +166,12 @@
     }
   },
   "devDependencies": {
+    "@asteasolutions/zod-to-openapi": "^7.3.4",
     "@hono/zod-openapi": "^0.19.10",
     "@scalar/hono-api-reference": "^0.5.184",
     "@types/bun": "latest",
     "hono": "^4.12.9",
+    "openapi3-ts": "^4.6.0",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "zod": "^3.25.76"

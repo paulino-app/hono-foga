@@ -23,6 +23,22 @@ class Reply {
     return context.json(data, statusCode as ContentfulStatusCode)
   }
 
+  static ok(context: Context) {
+    return context.json({ message: 'Success' }, OK)
+  }
+
+  static created(context: Context) {
+    return context.json({ message: 'Created' }, OK)
+  }
+
+  static updated(context: Context) {
+    return context.json({ message: 'Updated' }, OK)
+  }
+
+  static deleted(context: Context) {
+    return context.json({ message: 'Deleted' }, OK)
+  }
+
   static badRequest(context: Context) {
     return context.json({ message: BAD_REQUEST_MESSAGE }, BAD_REQUEST)
   }
