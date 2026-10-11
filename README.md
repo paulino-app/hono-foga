@@ -58,6 +58,34 @@ const token = await jwt.sign({ id: 42 })
 Routes that declare `permission` require `createPermissionGuard` when calling
 `registerModules`. Registration fails during startup if the guard is missing.
 
+Request policies can live beside each route's OpenAPI contract while their
+runtime implementation remains application-owned:
+
+```ts
+@Route({
+  method: 'post',
+  path: '/login',
+  bodyLimit: { maxSize: 16_384 },
+  rateLimit: [
+    { keyPrefix: 'login-ip', max: 10, windowSeconds: 60 },
+    { keyPrefix: 'login-account', max: 5, windowSeconds: 60 }
+  ],
+  responses: { 200: { description: 'Signed in' } }
+})
+static login(context: Context) {
+  // ...
+}
+
+await registerModules(app, {
+  modulesDir,
+  createBodyLimit: (config) => createAppBodyLimit(config),
+  createRateLimit: (config) => createAppRateLimit(config)
+})
+```
+
+Declaring either policy without its corresponding factory fails during startup.
+`rateLimit` accepts one configuration or an ordered array of configurations.
+
 Operational endpoints are independent middlewares, so applications control
 their order and authentication policy:
 

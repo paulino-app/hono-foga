@@ -11,13 +11,19 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { createRoute, type RouteConfig } from '@hono/zod-openapi'
 import type { Context, MiddlewareHandler } from 'hono'
-import type { PermissionConfig } from '../decorators/controller.js'
+import type {
+  BodyLimitConfig,
+  PermissionConfig,
+  RateLimitConfig
+} from '../decorators/controller.js'
 import createRouter from './createRouter.js'
 import type { AppOpenAPI } from './types.js'
 
 interface RegisteredRoute {
   options: RouteConfig
   handler: (...args: any[]) => any
+  bodyLimit?: BodyLimitConfig
+  rateLimit?: RateLimitConfig[]
   permission?: PermissionConfig[]
   getPermissionOrgId?: (context: Context) => any
 }
@@ -27,10 +33,15 @@ type CreatePermissionGuard = (args: {
   getOrgId?: (context: Context) => any
 }) => MiddlewareHandler
 
+type CreateBodyLimit = (config: BodyLimitConfig) => MiddlewareHandler
+type CreateRateLimit = (config: RateLimitConfig) => MiddlewareHandler
+
 export interface RegisterModulesOptions {
   modulesDir: string
   controllersFileName?: string
   importPath?: (name: string) => string
+  createBodyLimit?: CreateBodyLimit
+  createRateLimit?: CreateRateLimit
   createPermissionGuard?: CreatePermissionGuard
 }
 
@@ -42,6 +53,8 @@ export async function registerModules(
     modulesDir,
     controllersFileName = 'controllers.ts',
     importPath = (name: string) => join(modulesDir, name, controllersFileName),
+    createBodyLimit,
+    createRateLimit,
     createPermissionGuard
   } = options
 
@@ -70,25 +83,58 @@ export async function registerModules(
     const router = createRouter()
 
     for (const route of registeredRoutes) {
-      let handler = route.handler
+      const routeLabel = `${route.options.method.toUpperCase()} /${name}${route.options.path}`
+      const middlewares: MiddlewareHandler[] = []
+
+      if (route.bodyLimit && !createBodyLimit) {
+        throw new Error(
+          `Route ${routeLabel} declares a body limit but createBodyLimit is not configured`
+        )
+      }
+
+      if (route.bodyLimit && createBodyLimit) {
+        middlewares.push(createBodyLimit(route.bodyLimit))
+      }
+
+      if (route.rateLimit?.length && !createRateLimit) {
+        throw new Error(
+          `Route ${routeLabel} declares rate limits but createRateLimit is not configured`
+        )
+      }
+
+      if (route.rateLimit && createRateLimit) {
+        middlewares.push(...route.rateLimit.map(createRateLimit))
+      }
+
       if (route.permission && !createPermissionGuard) {
         throw new Error(
-          `Route ${route.options.method.toUpperCase()} /${name}${route.options.path} declares permissions but createPermissionGuard is not configured`
+          `Route ${routeLabel} declares permissions but createPermissionGuard is not configured`
         )
       }
 
       if (route.permission && createPermissionGuard) {
-        const guard = createPermissionGuard({
-          permissionArray: route.permission,
-          getOrgId: route.getPermissionOrgId
-        })
-        handler = async (context, ...args) => {
-          return guard(context, async () => {
-            return route.handler(context, ...args)
+        middlewares.push(
+          createPermissionGuard({
+            permissionArray: route.permission,
+            getOrgId: route.getPermissionOrgId
           })
-        }
+        )
       }
-      router.openapi(createRoute(route.options), handler)
+
+      for (const middleware of middlewares) {
+        router.use(route.options.path, (context, next) => {
+          if (
+            context.req.method.toLowerCase() !==
+            route.options.method.toLowerCase()
+          ) {
+            return next()
+          }
+
+          return middleware(context, next)
+        })
+      }
+
+      router.openapi(createRoute(route.options), route.handler)
     }
 
     app.route(`/${name}`, router)
