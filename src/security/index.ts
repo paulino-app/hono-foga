@@ -1,10 +1,12 @@
 export {
   createToken,
+  createJwt,
   getAuthSecret,
   getAuthSecretByToken,
   decodeToken,
   verify,
   type AuthSecret,
+  type CreateJwtOptions,
   type DecodedToken
 } from './jwt.js'
 export { isTokenExpired } from './expiredToken.js'

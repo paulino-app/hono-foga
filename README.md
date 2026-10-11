@@ -1,6 +1,6 @@
 # hono-foga
 
-Shared toolkit for [Hono](https://hono.dev) based services running on [Bun](https://bun.sh): OpenAPI helpers, route decorators, a convention over configuration module loader, status codes, validation and small utilities.
+Shared toolkit for [Hono](https://hono.dev) services running on Bun or Node: OpenAPI helpers, route decorators, a convention over configuration module loader, status codes, validation and small utilities.
 
 ## Install
 
@@ -11,17 +11,18 @@ bun add hono-foga
 `hono-foga` keeps its runtime surface small and treats the heavy framework pieces as peer dependencies, so you install them once in your app and the toolkit reuses your versions:
 
 ```sh
-bun add hono @hono/zod-openapi zod
+bun add hono @hono/zod-openapi zod @asteasolutions/zod-to-openapi
 # optional, only if you use the matching helpers
 bun add @scalar/hono-api-reference
 ```
 
-| Peer | Required | Used by |
-| --- | --- | --- |
-| `hono` | yes | everything |
-| `@hono/zod-openapi` | yes | routers, OpenAPI route definitions |
-| `zod` | yes | validation, schemas |
-| `@scalar/hono-api-reference` | optional | the Scalar reference UI |
+| Peer                             | Required | Used by                            |
+| -------------------------------- | -------- | ---------------------------------- |
+| `hono`                           | yes      | everything                         |
+| `@hono/zod-openapi`              | yes      | routers, OpenAPI route definitions |
+| `zod`                            | yes      | validation, schemas                |
+| `@asteasolutions/zod-to-openapi` | yes      | `oneOf` OpenAPI helpers            |
+| `@scalar/hono-api-reference`     | optional | the Scalar reference UI            |
 
 ## Usage
 
@@ -38,9 +39,28 @@ import { jsonContent } from 'hono-foga/openapi/helpers'
 import { createRouteRegistry } from 'hono-foga/decorators'
 ```
 
+Scalar is isolated from the framework barrel so projects that do not use the
+reference UI do not need to install it:
+
+```ts
+import configureOpenAPI from 'hono-foga/openapi/scalar'
+```
+
+JWT secrets are always explicit and empty secrets are rejected:
+
+```ts
+import { createJwt } from 'hono-foga/security'
+
+const jwt = createJwt({ secret: env.ACCESS_TOKEN_SECRET })
+const token = await jwt.sign({ id: 42 })
+```
+
+Routes that declare `permission` require `createPermissionGuard` when calling
+`registerModules`. Registration fails during startup if the guard is missing.
+
 ### Available subpaths
 
-`data`, `decorators`, `errors`, `formatting`, `framework`, `framework/context`, `framework/middlewares/*`, `network`, `openapi`, `openapi/helpers`, `openapi/schemas`, `security`, `utils`, `validation`, `polyfill/compression`.
+`data`, `decorators`, `errors`, `formatting`, `framework`, `framework/context`, `framework/middlewares/*`, `network`, `openapi`, `openapi/helpers`, `openapi/scalar`, `openapi/schemas`, `security`, `utils`, `validation`, `polyfill/compression`.
 
 ## Development
 

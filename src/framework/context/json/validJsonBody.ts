@@ -1,4 +1,4 @@
-import type { Context } from '../../types'
+import type { Context } from '../../types.js'
 
 /**
  * Returns the request's already-validated JSON body. Typed as `any` because

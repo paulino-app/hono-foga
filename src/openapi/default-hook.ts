@@ -1,4 +1,4 @@
-import { UNPROCESSABLE_ENTITY } from '../data/httpStatusCodes'
+import { UNPROCESSABLE_ENTITY } from '../data/httpStatusCodes.js'
 import type { Hook } from '@hono/zod-openapi'
 
 const defaultHook: Hook<any, any, any, any> = (result: any, c) => {

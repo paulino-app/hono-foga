@@ -3,9 +3,9 @@
  * `registeredRoutes` from its controllers.ts entry. Routes get mounted under
  * a `/<name>` prefix on the given app.
  *
- * Permission handling is optional: pass `createPermissionGuard` to wrap
- * handlers that declare `permission`. If you do not pass it, those handlers
- * are mounted without a guard.
+ * Routes that declare permissions require `createPermissionGuard`. Missing
+ * permission configuration fails during startup instead of mounting the route
+ * without authorization.
  */
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -71,6 +71,12 @@ export async function registerModules(
 
     for (const route of registeredRoutes) {
       let handler = route.handler
+      if (route.permission && !createPermissionGuard) {
+        throw new Error(
+          `Route ${route.options.method.toUpperCase()} /${name}${route.options.path} declares permissions but createPermissionGuard is not configured`
+        )
+      }
+
       if (route.permission && createPermissionGuard) {
         const guard = createPermissionGuard({
           permissionArray: route.permission,

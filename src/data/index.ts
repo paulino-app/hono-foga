@@ -2,12 +2,5 @@ export * from './httpStatusCodes.js'
 export * from './httpStatusMessages.js'
 export { statusCodesMap } from './statusCodesMap.js'
 export { getPath } from './getPath.js'
-export {
-  default as writeError,
-  serializeContent
-} from './writeError.js'
+export { default as writeError, serializeContent } from './writeError.js'
 export { createPrint } from './print.js'
-export {
-  default as welcomeMessage,
-  type WelcomeOptions
-} from './welcome.js'

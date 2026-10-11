@@ -6,6 +6,7 @@ export {
 export { default as notFound } from './notFound.js'
 export {
   createOnError,
+  type ErrorReport,
   type OnErrorOptions
 } from './onError.js'
 export { default as serveFavicon } from './serveFavicon.js'

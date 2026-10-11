@@ -1,7 +1,7 @@
 import { z } from '@hono/zod-openapi'
-import jsonContent from './json-content'
+import jsonContent from './json-content.js'
 
 export const ErrorResponse = jsonContent(
-  z.object({ error: z.string() }),
+  z.object({ message: z.string() }),
   'Error interno del servidor'
 )

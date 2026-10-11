@@ -3,6 +3,12 @@
   "version": "1.0.4",
   "description": "Shared toolkit for Hono based services: OpenAPI helpers, decorators, status codes, validation and small utilities.",
   "type": "module",
+  "sideEffects": [
+    "./dist/polyfill/compression.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -103,6 +109,10 @@
       "types": "./dist/openapi/default-hook.d.ts",
       "import": "./dist/openapi/default-hook.js"
     },
+    "./openapi/scalar": {
+      "types": "./dist/openapi/scalar.d.ts",
+      "import": "./dist/openapi/scalar.js"
+    },
     "./polyfill/compression": {
       "import": "./dist/polyfill/compression.js"
     },
@@ -142,9 +152,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc -p tsconfig.build.json --watch",
-    "clean": "rm -rf dist",
-    "prepare": "bun run build",
-    "prepublishOnly": "bun run clean && bun run build",
+    "clean": "node scripts/clean.mjs",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "bun test",
+    "check:package": "npm run clean && npm run build && node scripts/check-package.mjs",
     "lint": "bunx oxlint@latest --fix --ignore-pattern 'node_modules/**' --ignore-pattern 'dist/**'",
     "pretty": "prettier --write \"./src/**/*.{js,ts,json}\""
   },

@@ -1,5 +1,5 @@
-import { env } from 'bun'
 import {
+  base64url,
   jwtVerify,
   importJWK,
   decodeJwt,
@@ -23,19 +23,18 @@ export interface AuthSecret {
   k: string
 }
 
-export function getAuthSecret(): AuthSecret {
+export function getAuthSecret(secret: string): AuthSecret {
+  if (!secret) {
+    throw new Error('JWT secret must not be empty')
+  }
+
   return {
     kty: 'oct',
-    k: Buffer.from(env.ACCESS_TOKEN_SECRET ?? '').toString('base64')
+    k: base64url.encode(new TextEncoder().encode(secret))
   }
 }
 
-export function getAuthSecretByToken(token: string): AuthSecret {
-  return {
-    kty: 'oct',
-    k: Buffer.from(token).toString('base64')
-  }
-}
+export const getAuthSecretByToken = getAuthSecret
 
 export interface DecodedToken {
   id?: number
@@ -60,5 +59,19 @@ export async function verify(token: string, key: JWK) {
     return true
   } catch {
     return false
+  }
+}
+
+export interface CreateJwtOptions {
+  secret: string
+}
+
+export function createJwt(options: CreateJwtOptions) {
+  const key = getAuthSecret(options.secret)
+
+  return {
+    sign: (payload: JWTPayload) => createToken(payload, key),
+    verify: (token: string) => verify(token, key),
+    decode: decodeToken
   }
 }

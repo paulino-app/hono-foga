@@ -1,4 +1,4 @@
-import type { Context } from '../../types'
+import type { Context } from '../../types.js'
 
 /**
  * Obtiene un parámetro de ruta como string limpio.

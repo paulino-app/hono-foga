@@ -1,4 +1,4 @@
-import type { Context } from '../../types'
+import type { Context } from '../../types.js'
 
 function contextQueryNumber(context: Context, name: string): number | null {
   const value = context.req.query(name)

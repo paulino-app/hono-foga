@@ -11,14 +11,21 @@ interface ErrorWithStatus extends Error {
   status?: number
 }
 
+export interface ErrorReport {
+  error: Error
+  context: Context
+  status: StatusCode
+}
+
 export interface OnErrorOptions {
   mode?: string
+  report?: (details: ErrorReport) => void | Promise<void>
 }
 
 export function createOnError(options: OnErrorOptions = {}): ErrorHandler {
   const isDevelopment = options.mode !== 'production'
 
-  return (err, context: Context) => {
+  return async (err, context: Context) => {
     const e = err as ErrorWithStatus
 
     if (isDevelopment) {
@@ -31,7 +38,12 @@ export function createOnError(options: OnErrorOptions = {}): ErrorHandler {
         ? (currentStatus as StatusCode)
         : INTERNAL_SERVER_ERROR
 
-    const errorMessage = e.message || INTERNAL_SERVER_ERROR_MESSAGE
+    await options.report?.({ error: e, context, status: statusCode })
+
+    const errorMessage =
+      !isDevelopment && statusCode >= INTERNAL_SERVER_ERROR
+        ? INTERNAL_SERVER_ERROR_MESSAGE
+        : e.message || INTERNAL_SERVER_ERROR_MESSAGE
 
     return context.json(
       {

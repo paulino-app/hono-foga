@@ -1,4 +1,4 @@
-import type { Context } from '../../types'
+import type { Context } from '../../types.js'
 /**
  * Obtiene el cuerpo de la solicitud como JSON.
  *

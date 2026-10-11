@@ -3,6 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status'
 import {
   BAD_REQUEST,
   CONFLICT,
+  CREATED,
   NOT_FOUND,
   OK,
   TOO_MANY_REQUESTS,
@@ -16,7 +17,7 @@ import {
   UNAUTHORIZED_MESSAGE
 } from '../data/httpStatusMessages.js'
 
-const DEFAULT_RETRY_AFTER_MS = 15 * 60 * 1000
+const DEFAULT_RETRY_AFTER_SECONDS = 15 * 60
 
 class Reply {
   static json(context: Context, data: unknown, statusCode: number = OK) {
@@ -28,7 +29,7 @@ class Reply {
   }
 
   static created(context: Context) {
-    return context.json({ message: 'Created' }, OK)
+    return context.json({ message: 'Created' }, CREATED)
   }
 
   static updated(context: Context) {
@@ -56,7 +57,7 @@ class Reply {
     attemptStatus: { retryAfterSeconds?: number } = {}
   ) {
     const retryAfter =
-      attemptStatus.retryAfterSeconds ?? DEFAULT_RETRY_AFTER_MS
+      attemptStatus.retryAfterSeconds ?? DEFAULT_RETRY_AFTER_SECONDS
     context.header('Retry-After', retryAfter.toString())
 
     return context.json(

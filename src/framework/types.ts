@@ -28,9 +28,7 @@ export type Context<Bindings extends AppBindings = AppBindings> = HonoContext<
 >
 
 export type AppOpenAPI<Bindings extends AppBindings = AppBindings> =
-  OpenAPIHono<Bindings> & {
-    startServer: (options?: { port?: number }) => unknown
-  }
+  OpenAPIHono<Bindings>
 
 // Backwards compatible alias for consumers that still spell it with the typo.
 export type AppBindigs = AppBindings

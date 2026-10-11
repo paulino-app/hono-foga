@@ -1,7 +1,7 @@
 import type { Context } from 'hono'
 import type { RouteConfig } from '@hono/zod-openapi'
-import { INTERNAL_SERVER_ERROR } from '../data/httpStatusCodes'
-import { ErrorResponse } from '../openapi/helpers/json-internal-error'
+import { INTERNAL_SERVER_ERROR } from '../data/httpStatusCodes.js'
+import { ErrorResponse } from '../openapi/helpers/json-internal-error.js'
 
 // Permission descriptor is left generic so the package can stay decoupled from
 // any specific permission catalog. Consumers narrow it to their own shape.

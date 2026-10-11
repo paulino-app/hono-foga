@@ -1,5 +1,5 @@
 import { HTTPException } from 'hono/http-exception'
-import type { Context } from '../../types'
+import type { Context } from '../../types.js'
 
 /**
  * Reads the `:id` route param and returns it as a finite integer. Throws
