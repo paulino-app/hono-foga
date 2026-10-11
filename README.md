@@ -58,10 +58,11 @@ const token = await jwt.sign({ id: 42 })
 Routes that declare `permission` require `createPermissionGuard` when calling
 `registerModules`. Registration fails during startup if the guard is missing.
 
-Request policies can live beside each route's OpenAPI contract while their
-runtime implementation remains application-owned:
+Request policies can live beside each route's OpenAPI contract:
 
 ```ts
+import { createMemoryRateLimitFactory } from 'hono-foga/framework/middlewares'
+
 @Route({
   method: 'post',
   path: '/login',
@@ -76,15 +77,23 @@ static login(context: Context) {
   // ...
 }
 
+const createRateLimit = createMemoryRateLimitFactory({
+  identifyClient: (context) => getClientAddress(context),
+  maxBuckets: 10_000
+})
+
 await registerModules(app, {
   modulesDir,
   createBodyLimit: (config) => createAppBodyLimit(config),
-  createRateLimit: (config) => createAppRateLimit(config)
+  createRateLimit
 })
 ```
 
 Declaring either policy without its corresponding factory fails during startup.
 `rateLimit` accepts one configuration or an ordered array of configurations.
+The bundled in-memory factory owns counters, expiration, capacity protection,
+`429` responses and `Retry-After`. Applications still provide client identity
+resolution so proxy trust and runtime-specific connection APIs remain explicit.
 
 Operational endpoints are independent middlewares, so applications control
 their order and authentication policy:

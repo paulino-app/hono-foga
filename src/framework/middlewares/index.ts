@@ -13,6 +13,11 @@ export {
   createGetCurrentTime,
   type LoggerOptions
 } from './logger.js'
+export {
+  createMemoryRateLimitFactory,
+  type CreateMemoryRateLimit,
+  type MemoryRateLimitFactoryOptions
+} from './memoryRateLimit.js'
 export { default as notFound } from './notFound.js'
 export {
   createOnError,
