@@ -38,7 +38,11 @@ export function createOnError(options: OnErrorOptions = {}): ErrorHandler {
         ? (currentStatus as StatusCode)
         : INTERNAL_SERVER_ERROR
 
-    await options.report?.({ error: e, context, status: statusCode })
+    try {
+      await options.report?.({ error: e, context, status: statusCode })
+    } catch (reportError) {
+      console.error('Error reporter failed:', reportError)
+    }
 
     const errorMessage =
       !isDevelopment && statusCode >= INTERNAL_SERVER_ERROR

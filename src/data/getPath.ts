@@ -1,4 +1,14 @@
-import path from 'path'
+import path from 'node:path'
+
+export type PathResolver = (...segments: string[]) => string
+
+export function createPathResolver(baseDirectory: string): PathResolver {
+  if (!baseDirectory) {
+    throw new Error('Path resolver base directory must not be empty')
+  }
+
+  return (...segments: string[]) => path.join(baseDirectory, ...segments)
+}
 
 /**
  * Genera una ruta absoluta basada en el directorio del proyecto.
@@ -11,6 +21,5 @@ import path from 'path'
  * @returns {string} Ruta absoluta construida.
  */
 export function getPath(...args: string[]): string {
-  const projectDirectory = process.cwd()
-  return path.join(projectDirectory, ...args)
+  return createPathResolver(process.cwd())(...args)
 }

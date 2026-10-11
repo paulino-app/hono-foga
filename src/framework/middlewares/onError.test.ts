@@ -51,4 +51,28 @@ describe('createOnError', () => {
 
     expect(reports).toEqual(['boom'])
   })
+
+  test('still responds when the reporter fails', async () => {
+    const app = new Hono()
+    app.get('/', () => {
+      throw new Error('boom')
+    })
+    app.onError(
+      createOnError({
+        mode: 'production',
+        report: () => {
+          throw new Error('reporter unavailable')
+        }
+      })
+    )
+
+    const originalConsoleError = console.error
+    try {
+      console.error = () => {}
+      const response = await app.request('/')
+      expect(response.status).toBe(500)
+    } finally {
+      console.error = originalConsoleError
+    }
+  })
 })

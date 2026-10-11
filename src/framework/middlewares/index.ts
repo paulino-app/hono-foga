@@ -1,3 +1,13 @@
+export { createAbout, type AboutOptions } from './about.js'
+export { createAlive, type AliveOptions } from './alive.js'
+export {
+  createHealth,
+  type HealthCheck,
+  type HealthDependencies,
+  type HealthDependencyResult,
+  type HealthOptions,
+  type HealthStatus
+} from './health.js'
 export {
   createLogger,
   createGetCurrentTime,
@@ -10,4 +20,7 @@ export {
   type OnErrorOptions
 } from './onError.js'
 export { default as serveFavicon } from './serveFavicon.js'
-export { default as serveRobots } from './serveRobots.js'
+export {
+  default as serveRobots,
+  type ServeRobotsOptions
+} from './serveRobots.js'

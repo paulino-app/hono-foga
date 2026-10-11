@@ -58,6 +58,57 @@ const token = await jwt.sign({ id: 42 })
 Routes that declare `permission` require `createPermissionGuard` when calling
 `registerModules`. Registration fails during startup if the guard is missing.
 
+Operational endpoints are independent middlewares, so applications control
+their order and authentication policy:
+
+```ts
+import {
+  createAbout,
+  createAlive,
+  createHealth
+} from 'hono-foga/framework/middlewares'
+
+app.use(createAbout({ info: { name: 'Example API', version: '1.0.0' } }))
+app.use(createAlive())
+app.use(
+  createHealth({
+    version: '1.0.0',
+    checks: {
+      database: () => database.execute('select 1'),
+      redis: () => redis.ping()
+    }
+  })
+)
+```
+
+The request logger exposes structured entries for project-specific formatting
+and sinks:
+
+```ts
+import { createLogger } from 'hono-foga/framework/middlewares'
+
+app.use(
+  createLogger({
+    timeZone: 'America/Mexico_City',
+    skip: (context) => context.req.path === '/alive',
+    enrich: (context) => ({ actor: context.get('accountId') }),
+    sink: (message) => logger.info(message)
+  })
+)
+```
+
+Use an explicit base directory instead of relying on the process working
+directory when resolving application files:
+
+```ts
+import { dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createPathResolver } from 'hono-foga/data'
+
+const currentDirectory = dirname(fileURLToPath(import.meta.url))
+const resolvePath = createPathResolver(currentDirectory)
+```
+
 ### Available subpaths
 
 `data`, `decorators`, `errors`, `formatting`, `framework`, `framework/context`, `framework/middlewares/*`, `network`, `openapi`, `openapi/helpers`, `openapi/scalar`, `openapi/schemas`, `security`, `utils`, `validation`, `polyfill/compression`.

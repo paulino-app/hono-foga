@@ -1,11 +1,7 @@
-/**
- * HTTP request logger with colored console output. The factory takes the
- * timezone so the package stays free of environment lookups.
- */
 import chalk from 'chalk'
-import type { MiddlewareHandler } from 'hono'
+import type { Context, MiddlewareHandler } from 'hono'
 
-const httpAbreviation: Record<string, string> = {
+const httpAbbreviation: Record<string, string> = {
   GET: 'GET',
   POST: 'PST',
   DELETE: 'DEL',
@@ -45,10 +41,10 @@ function getMethodColor(label: string) {
   return chalk.gray(label)
 }
 
-const methodDirection: Record<string, string> = {
+const methodDirection = {
   response: chalk.bgWhite.black(' RES '),
   request: chalk.bgBlack.white(' REQ ')
-}
+} as const
 
 export function createGetCurrentTime(timeZone: string): () => string {
   return () => {
@@ -61,57 +57,109 @@ export function createGetCurrentTime(timeZone: string): () => string {
     const ampm = hours >= 12 ? 'PM' : 'AM'
 
     hours = hours % 12
-    hours = hours ? hours : 12
-    const strHours = hours < 10 ? '0' + hours : hours.toString()
-    const strMinutes = minutes < 10 ? '0' + minutes : minutes.toString()
-    const strSeconds = seconds < 10 ? '0' + seconds : seconds.toString()
+    hours = hours || 12
+    const strHours = hours < 10 ? `0${hours}` : hours.toString()
+    const strMinutes = minutes < 10 ? `0${minutes}` : minutes.toString()
+    const strSeconds = seconds < 10 ? `0${seconds}` : seconds.toString()
 
     return `${strHours}:${strMinutes}:${strSeconds} ${ampm}`
   }
 }
 
+export interface LogEntry {
+  context: Context
+  direction: 'request' | 'response'
+  timestamp: string
+  method: string
+  url: string
+  status?: number
+  durationMs?: number
+  metadata: Record<string, unknown>
+}
+
+export type LoggerSink = (
+  message: string,
+  entry: LogEntry
+) => void | Promise<void>
+
 export interface LoggerOptions {
   timeZone: string
+  skip?: (context: Context) => boolean | Promise<boolean>
+  enrich?: (
+    context: Context,
+    direction: LogEntry['direction']
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>
+  format?: (entry: LogEntry) => string
+  sink?: LoggerSink
+}
+
+function formatDuration(durationMs: number): string {
+  return durationMs < 1000
+    ? `${durationMs}ms`
+    : `${Math.round(durationMs / 1000)}s`
+}
+
+export function formatLogEntry(entry: LogEntry): string {
+  const methodLabel = ` ${httpAbbreviation[entry.method] ?? entry.method} `
+  const method = getMethodColor(methodLabel)
+  const direction = methodDirection[entry.direction]
+  const timestamp = chalk.gray(entry.timestamp)
+  const status = entry.status ? getStatusColor(entry.status) : ''
+  const duration =
+    entry.durationMs === undefined
+      ? ''
+      : chalk.gray(formatDuration(entry.durationMs))
+  const metadata = Object.values(entry.metadata)
+    .filter((value) => value !== undefined && value !== null && value !== '')
+    .map(String)
+    .join(' ')
+  const suffix = [status, duration, metadata].filter(Boolean).join(' ')
+
+  return `${timestamp} ${direction} ${method} ${entry.url}${suffix ? ` ${suffix}` : ''}`
+}
+
+function getRequestUrl(context: Context): string {
+  if (!context.req.url.includes('://')) {
+    return context.req.url
+  }
+
+  const url = new URL(context.req.url)
+  return `${url.pathname}${url.search}${url.hash}`
 }
 
 export function createLogger(options: LoggerOptions): MiddlewareHandler {
   const getCurrentTime = createGetCurrentTime(options.timeZone)
+  const format = options.format ?? formatLogEntry
+  const sink = options.sink ?? ((message: string) => console.log(message))
 
-  function customLogger(ctx: any, message: string) {
-    const [direction, time, status] = message.split(' ')
-    const method: string = ctx.req.method
-    const url: string = ctx.req.url.includes('://')
-      ? new URL(ctx.req.url).pathname +
-        new URL(ctx.req.url).search +
-        new URL(ctx.req.url).hash
-      : ctx.req.url
+  return async (context, next) => {
+    if (await options.skip?.(context)) {
+      return next()
+    }
 
-    const methodFormated = ` ${httpAbreviation[method] ?? method} `
-    const methodColor = getMethodColor(methodFormated)
-    const statusColor = status ? getStatusColor(parseInt(status, 10)) : ''
+    const createEntry = async (
+      direction: LogEntry['direction'],
+      details: Pick<LogEntry, 'status' | 'durationMs'> = {}
+    ): Promise<LogEntry> => ({
+      context,
+      direction,
+      timestamp: getCurrentTime(),
+      method: context.req.method,
+      url: getRequestUrl(context),
+      metadata: (await options.enrich?.(context, direction)) ?? {},
+      ...details
+    })
 
-    const _direction = methodDirection[direction]
-    const _time = chalk.gray(getCurrentTime())
-    const finalTime = chalk.gray(time ?? '')
-    const meta = time ? `${statusColor} ${finalTime}` : ''
-    const log = `${_time} ${_direction} ${methodColor} ${url} ${meta}`
+    const requestEntry = await createEntry('request')
+    await sink(format(requestEntry), requestEntry)
 
-    console.log(log)
-  }
-
-  return async (ctx, next) => {
-    const start = Date.now()
-    customLogger(ctx, 'request')
-
+    const startedAt = Date.now()
     await next()
 
-    const end = Date.now()
-    const duration = Math.round(end - start)
-    const _duration =
-      duration < 1000
-        ? `${duration}ms`
-        : `${Math.round(duration / 1000)}s`
-
-    customLogger(ctx, `response ${_duration} ${ctx.res.status}`)
+    const responseEntry = await createEntry('response', {
+      status: context.res.status,
+      durationMs: Date.now() - startedAt
+    })
+    await sink(format(responseEntry), responseEntry)
   }
 }
