@@ -1,6 +1,6 @@
 {
   "name": "hono-foga",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "Shared toolkit for Hono based services: OpenAPI helpers, decorators, status codes, validation and small utilities.",
   "type": "module",
   "sideEffects": [
