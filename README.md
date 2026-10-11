@@ -57,6 +57,25 @@ const token = await jwt.sign({ id: 42 })
 
 Routes that declare `permission` require `createPermissionGuard` when calling
 `registerModules`. Registration fails during startup if the guard is missing.
+`createPermissionGuardFactory` handles authentication, `401`/`403` responses,
+permission modes, and generic route scopes while applications retain ownership
+of identity verification and permission storage:
+
+```ts
+import { createPermissionGuardFactory } from 'hono-foga/framework/middlewares'
+
+const createPermissionGuard = createPermissionGuardFactory({
+  authenticate: (context) => verifyRequestIdentity(context),
+  authorize: ({ principal, permissions, mode, scope }) =>
+    permissionStore.authorize({ principal, permissions, mode, scope })
+})
+
+await registerModules(app, { modulesDir, createPermissionGuard })
+```
+
+Routes can declare `permissionMode: 'any' | 'all'` and resolve arbitrary scope
+data with `getPermissionScope`. The older `getPermissionOrgId` resolver remains
+supported and is exposed to guards as `scope.organizationId`.
 
 Request policies can live beside each route's OpenAPI contract:
 

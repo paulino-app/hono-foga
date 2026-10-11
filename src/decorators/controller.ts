@@ -7,9 +7,13 @@ import { ErrorResponse } from '../openapi/helpers/json-internal-error.js'
 // any specific permission catalog. Consumers narrow it to their own shape.
 export type PermissionConfig = {
   id?: number
+  key?: string
   type?: number
   [key: string]: unknown
 }
+
+export type PermissionMode = 'any' | 'all'
+export type PermissionScope = Record<string, unknown>
 
 export interface ControllerOptions {
   basePath?: string
@@ -39,6 +43,10 @@ export interface ExtendedRouteOptions extends RouteConfig {
   bodyLimit?: BodyLimitConfig
   rateLimit?: RateLimitConfig | RateLimitConfig[]
   permission?: PermissionConfig[]
+  permissionMode?: PermissionMode
+  getPermissionScope?: (
+    context: Context
+  ) => MaybeAsync<PermissionScope | null | undefined>
   getPermissionOrgId?: (
     context: Context
   ) => MaybeAsync<number | null | undefined>
@@ -52,6 +60,10 @@ export interface RegisteredRoute {
   bodyLimit?: BodyLimitConfig
   rateLimit?: RateLimitConfig[]
   permission?: PermissionConfig[]
+  permissionMode?: PermissionMode
+  getPermissionScope?: (
+    context: Context
+  ) => MaybeAsync<PermissionScope | null | undefined>
   getPermissionOrgId?: (
     context: Context
   ) => MaybeAsync<number | null | undefined>
@@ -70,6 +82,8 @@ export function createRouteRegistry() {
         bodyLimit,
         rateLimit,
         permission,
+        permissionMode,
+        getPermissionScope,
         getPermissionOrgId,
         ...routeConfig
       } = options
@@ -93,6 +107,8 @@ export function createRouteRegistry() {
             : [rateLimit]
           : undefined,
         permission,
+        permissionMode,
+        getPermissionScope,
         getPermissionOrgId
       })
 

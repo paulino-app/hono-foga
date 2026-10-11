@@ -7,5 +7,7 @@ export {
   type RegisteredRoute,
   type BodyLimitConfig,
   type RateLimitConfig,
-  type PermissionConfig
+  type PermissionConfig,
+  type PermissionMode,
+  type PermissionScope
 } from './controller.js'

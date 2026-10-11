@@ -18,6 +18,11 @@ export {
   type CreateMemoryRateLimit,
   type MemoryRateLimitFactoryOptions
 } from './memoryRateLimit.js'
+export {
+  createPermissionGuardFactory,
+  type PermissionAuthorizationRequest,
+  type PermissionGuardFactoryOptions
+} from './permissionGuard.js'
 export { default as notFound } from './notFound.js'
 export {
   createOnError,

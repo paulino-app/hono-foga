@@ -14,6 +14,8 @@ import type { Context, MiddlewareHandler } from 'hono'
 import type {
   BodyLimitConfig,
   PermissionConfig,
+  PermissionMode,
+  PermissionScope,
   RateLimitConfig
 } from '../decorators/controller.js'
 import createRouter from './createRouter.js'
@@ -25,13 +27,27 @@ interface RegisteredRoute {
   bodyLimit?: BodyLimitConfig
   rateLimit?: RateLimitConfig[]
   permission?: PermissionConfig[]
+  permissionMode?: PermissionMode
+  getPermissionScope?: (context: Context) => any
   getPermissionOrgId?: (context: Context) => any
 }
 
-type CreatePermissionGuard = (args: {
+export interface PermissionGuardConfig {
   permissionArray: PermissionConfig[]
+  permissionMode: PermissionMode
+  getScope?: (
+    context: Context
+  ) =>
+    | PermissionScope
+    | null
+    | undefined
+    | Promise<PermissionScope | null | undefined>
   getOrgId?: (context: Context) => any
-}) => MiddlewareHandler
+}
+
+export type CreatePermissionGuard = (
+  config: PermissionGuardConfig
+) => MiddlewareHandler
 
 type CreateBodyLimit = (config: BodyLimitConfig) => MiddlewareHandler
 type CreateRateLimit = (config: RateLimitConfig) => MiddlewareHandler
@@ -116,6 +132,8 @@ export async function registerModules(
         middlewares.push(
           createPermissionGuard({
             permissionArray: route.permission,
+            permissionMode: route.permissionMode ?? 'any',
+            getScope: route.getPermissionScope,
             getOrgId: route.getPermissionOrgId
           })
         )

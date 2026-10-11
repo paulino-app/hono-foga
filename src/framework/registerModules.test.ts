@@ -110,7 +110,10 @@ describe('registerModules', () => {
         rateLimit: [
           { keyPrefix: 'ip', max: 10, windowSeconds: 60 },
           { keyPrefix: 'account', max: 5, windowSeconds: 60 }
-        ]
+        ],
+        permission: [{ key: 'account.read' }],
+        permissionMode: 'all',
+        getPermissionScope: () => ({ organizationId: 7 })
       }]`
     )
     const events: string[] = []
@@ -126,13 +129,25 @@ describe('registerModules', () => {
       createRateLimit: (config) => async (_context, next) => {
         events.push(`rate:${config.keyPrefix}`)
         await next()
+      },
+      createPermissionGuard: (config) => async (context, next) => {
+        const scope = await config.getScope?.(context)
+        events.push(
+          `permission:${config.permissionMode}:${config.permissionArray[0]?.key}:${scope?.organizationId}`
+        )
+        await next()
       }
     })
 
     const response = await app.request('/auth/login', { method: 'POST' })
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ ok: true })
-    expect(events).toEqual(['body:1024', 'rate:ip', 'rate:account'])
+    expect(events).toEqual([
+      'body:1024',
+      'rate:ip',
+      'rate:account',
+      'permission:all:account.read:7'
+    ])
 
     events.length = 0
     expect((await app.request('/auth/login')).status).toBe(404)
