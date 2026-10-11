@@ -55,8 +55,56 @@ const jwt = createJwt({ secret: env.ACCESS_TOKEN_SECRET })
 const token = await jwt.sign({ id: 42 })
 ```
 
-Routes that declare `permission` require `createPermissionGuard` when calling
-`registerModules`. Registration fails during startup if the guard is missing.
+Routes can use `auth: true` when they only require a valid identity, or declare
+`permission` when they also require authorization. `registerModules` requires
+`authGuard` for auth-only routes and `permissionGuard` for permission routes;
+registration fails during startup if either guard is missing. `auth: true` also
+documents `bearerAuth` in OpenAPI unless the route provides an explicit
+`security` configuration.
+
+Route policies add their common OpenAPI responses automatically: `auth` adds
+`401`, `permission` adds `401` and `403`, `bodyLimit` adds `413`, `rateLimit`
+adds `429`, and request validation adds `422`. Explicit route responses take
+precedence, so `responses` can focus on successful and domain-specific cases.
+
+`createApp()` owns the standard application assembly and accepts either a
+minimal module configuration or complete runtime hooks:
+
+```ts
+import { createApp } from 'hono-foga/framework'
+
+const app = await createApp({})
+
+const configuredApp = await createApp({
+  mode: 'development',
+  bootstrap: migrateDatabase,
+  port: 9000,
+  cors: { origin: ['https://example.com'] },
+  logger: { timeZone: 'UTC' },
+  root: { name: 'Example API', version: '1.0.0' },
+  memoryRateLimit: {
+    identifyClient: (context) => getClientAddress(context),
+    maxBuckets: 10_000
+  },
+  authGuard: createAuthGuard,
+  permissionGuard: createPermissionGuard,
+  openapi: {
+    title: 'Example API',
+    version: '1.0.0'
+  }
+})
+```
+
+Compression and route body limits are enabled by default. CORS, request logging,
+rate limiting, guards, bootstrap and application-specific routes are explicit.
+Application modules are always loaded from `./src/app` relative to the current
+working directory.
+When `port` is present, `createApp()` starts Bun after registration completes;
+without it, the app remains in-memory for tests and scripts. Each call creates
+its own in-memory rate-limit store.
+OpenAPI and Scalar routes are exposed by default only in `development` mode;
+`openapi.enabled` can override that behavior explicitly.
+
 `createPermissionGuardFactory` handles authentication, `401`/`403` responses,
 permission modes, and generic route scopes while applications retain ownership
 of identity verification and permission storage:
@@ -70,7 +118,11 @@ const createPermissionGuard = createPermissionGuardFactory({
     permissionStore.authorize({ principal, permissions, mode, scope })
 })
 
-await registerModules(app, { modulesDir, createPermissionGuard })
+await registerModules(app, {
+  modulesDir,
+  authGuard: () => authenticateRequest,
+  permissionGuard: createPermissionGuard
+})
 ```
 
 Routes can declare `permissionMode: 'any' | 'all'` and resolve arbitrary scope

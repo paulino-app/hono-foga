@@ -6,6 +6,7 @@ import { apiReference } from '@scalar/hono-api-reference'
 import type { AppOpenAPI } from '../framework/types.js'
 
 export interface ConfigureOpenAPIOptions {
+  enabled?: boolean
   mode?: string
   title: string
   version: string
@@ -20,6 +21,7 @@ export default function configureOpenAPI(
 ) {
   const {
     mode,
+    enabled = mode === 'development',
     title,
     version,
     description = 'Documentación oficial',
@@ -27,7 +29,13 @@ export default function configureOpenAPI(
     referencePath = '/reference'
   } = options
 
-  if (mode === 'production') {
+  app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
+    type: 'http',
+    scheme: 'bearer',
+    bearerFormat: 'JWT'
+  })
+
+  if (!enabled) {
     return
   }
 
@@ -37,15 +45,6 @@ export default function configureOpenAPI(
       version,
       title,
       description
-    },
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
     },
     security: []
   } as Parameters<typeof app.doc>[1])

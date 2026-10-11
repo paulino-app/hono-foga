@@ -1,9 +1,16 @@
 export {
+  default as createApp,
+  type CreateAppOpenAPIOptions,
+  type CreateAppOptions,
+  type RootResponse
+} from './createApp.js'
+export {
   default as createRouter,
   type CreateRouterOptions
 } from './createRouter.js'
 export {
   registerModules,
+  type CreateAuthGuard,
   type CreatePermissionGuard,
   type PermissionGuardConfig,
   type RegisterModulesOptions

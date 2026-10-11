@@ -1,7 +1,17 @@
 import type { Context } from 'hono'
 import type { RouteConfig } from '@hono/zod-openapi'
-import { INTERNAL_SERVER_ERROR } from '../data/httpStatusCodes.js'
+import { z } from '@hono/zod-openapi'
+import {
+  FORBIDDEN,
+  INTERNAL_SERVER_ERROR,
+  REQUEST_TOO_LONG,
+  TOO_MANY_REQUESTS,
+  UNAUTHORIZED,
+  UNPROCESSABLE_ENTITY
+} from '../data/httpStatusCodes.js'
+import jsonContent from '../openapi/helpers/json-content.js'
 import { ErrorResponse } from '../openapi/helpers/json-internal-error.js'
+import jsonMessage from '../openapi/helpers/json-message.js'
 
 // Permission descriptor is left generic so the package can stay decoupled from
 // any specific permission catalog. Consumers narrow it to their own shape.
@@ -27,6 +37,17 @@ export function Controller(_options: ControllerOptions = {}) {
 
 type MaybeAsync<T> = T | Promise<T>
 
+const ValidationErrorResponse = jsonContent(
+  z.object({
+    success: z.literal(false),
+    error: z.object({
+      issues: z.array(z.unknown()),
+      name: z.string()
+    })
+  }),
+  'Invalid request'
+)
+
 export interface BodyLimitConfig {
   maxSize: number
   message?: string
@@ -40,6 +61,7 @@ export interface RateLimitConfig {
 }
 
 export interface ExtendedRouteOptions extends RouteConfig {
+  auth?: boolean
   bodyLimit?: BodyLimitConfig
   rateLimit?: RateLimitConfig | RateLimitConfig[]
   permission?: PermissionConfig[]
@@ -57,6 +79,7 @@ export type RouteOptions = ExtendedRouteOptions
 export interface RegisteredRoute {
   options: RouteConfig
   handler: (...args: any[]) => any
+  auth?: boolean
   bodyLimit?: BodyLimitConfig
   rateLimit?: RateLimitConfig[]
   permission?: PermissionConfig[]
@@ -79,6 +102,7 @@ export function createRouteRegistry() {
       descriptor: PropertyDescriptor
     ) => {
       const {
+        auth,
         bodyLimit,
         rateLimit,
         permission,
@@ -88,18 +112,37 @@ export function createRouteRegistry() {
         ...routeConfig
       } = options
 
-      // Aseguramos que todas las rutas tengan documentado INTERNAL_SERVER_ERROR
-      const responsesWithInternalError = {
-        ...routeConfig.responses,
-        [INTERNAL_SERVER_ERROR]: ErrorResponse
+      const policyResponses = {
+        [INTERNAL_SERVER_ERROR]: ErrorResponse,
+        ...(auth || permission
+          ? { [UNAUTHORIZED]: jsonMessage('Authentication required') }
+          : {}),
+        ...(permission
+          ? { [FORBIDDEN]: jsonMessage('Permission required') }
+          : {}),
+        ...(bodyLimit
+          ? { [REQUEST_TOO_LONG]: jsonMessage('Request body is too large') }
+          : {}),
+        ...(rateLimit
+          ? { [TOO_MANY_REQUESTS]: jsonMessage('Too many requests') }
+          : {}),
+        ...(routeConfig.request
+          ? { [UNPROCESSABLE_ENTITY]: ValidationErrorResponse }
+          : {}),
+        ...routeConfig.responses
       }
 
       registeredRoutes.push({
         options: {
           ...routeConfig,
-          responses: responsesWithInternalError
+          security:
+            (auth || permission) && routeConfig.security === undefined
+              ? [{ bearerAuth: [] }]
+              : routeConfig.security,
+          responses: policyResponses
         },
         handler: descriptor.value,
+        auth,
         bodyLimit,
         rateLimit: rateLimit
           ? Array.isArray(rateLimit)

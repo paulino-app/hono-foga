@@ -4,7 +4,7 @@
  */
 import type { Context, ErrorHandler } from 'hono'
 import type { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status'
-import { INTERNAL_SERVER_ERROR, OK } from '../../data/httpStatusCodes.js'
+import { INTERNAL_SERVER_ERROR } from '../../data/httpStatusCodes.js'
 import { INTERNAL_SERVER_ERROR_MESSAGE } from '../../data/httpStatusMessages.js'
 
 interface ErrorWithStatus extends Error {
@@ -32,10 +32,9 @@ export function createOnError(options: OnErrorOptions = {}): ErrorHandler {
       console.error('Error capturado:', e)
     }
 
-    const currentStatus = e.status ?? context.newResponse(null).status
     const statusCode: StatusCode =
-      currentStatus !== OK
-        ? (currentStatus as StatusCode)
+      Number.isInteger(e.status) && e.status! >= 400 && e.status! <= 599
+        ? (e.status as StatusCode)
         : INTERNAL_SERVER_ERROR
 
     try {
@@ -50,10 +49,7 @@ export function createOnError(options: OnErrorOptions = {}): ErrorHandler {
         : e.message || INTERNAL_SERVER_ERROR_MESSAGE
 
     return context.json(
-      {
-        message: errorMessage,
-        stack: isDevelopment ? e.stack : undefined
-      },
+      { message: errorMessage },
       statusCode as ContentfulStatusCode
     )
   }

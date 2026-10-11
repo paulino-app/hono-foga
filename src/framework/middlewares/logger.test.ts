@@ -22,10 +22,11 @@ describe('createLogger', () => {
     app.get('*', (context) => context.text('ok'))
 
     await app.request('/alive')
-    await app.request('/accounts')
+    await app.request('/accounts?access_token=secret')
 
     expect(messages).toEqual(['request:paulino', 'response:paulino'])
     expect(entries[1]?.status).toBe(200)
     expect(entries[1]?.durationMs).toBeNumber()
+    expect(entries[0]?.url).toBe('/accounts')
   })
 })

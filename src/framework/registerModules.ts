@@ -3,9 +3,9 @@
  * `registeredRoutes` from its controllers.ts entry. Routes get mounted under
  * a `/<name>` prefix on the given app.
  *
- * Routes that declare permissions require `createPermissionGuard`. Missing
- * permission configuration fails during startup instead of mounting the route
- * without authorization.
+ * Routes that declare authentication or permissions require their respective
+ * guards. Missing configuration fails during startup instead of mounting a
+ * route without protection.
  */
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
@@ -24,6 +24,7 @@ import type { AppOpenAPI } from './types.js'
 interface RegisteredRoute {
   options: RouteConfig
   handler: (...args: any[]) => any
+  auth?: boolean
   bodyLimit?: BodyLimitConfig
   rateLimit?: RateLimitConfig[]
   permission?: PermissionConfig[]
@@ -48,6 +49,7 @@ export interface PermissionGuardConfig {
 export type CreatePermissionGuard = (
   config: PermissionGuardConfig
 ) => MiddlewareHandler
+export type CreateAuthGuard = () => MiddlewareHandler
 
 type CreateBodyLimit = (config: BodyLimitConfig) => MiddlewareHandler
 type CreateRateLimit = (config: RateLimitConfig) => MiddlewareHandler
@@ -58,7 +60,8 @@ export interface RegisterModulesOptions {
   importPath?: (name: string) => string
   createBodyLimit?: CreateBodyLimit
   createRateLimit?: CreateRateLimit
-  createPermissionGuard?: CreatePermissionGuard
+  authGuard?: CreateAuthGuard
+  permissionGuard?: CreatePermissionGuard
 }
 
 export async function registerModules(
@@ -71,7 +74,8 @@ export async function registerModules(
     importPath = (name: string) => join(modulesDir, name, controllersFileName),
     createBodyLimit,
     createRateLimit,
-    createPermissionGuard
+    authGuard,
+    permissionGuard
   } = options
 
   const entries = readdirSync(modulesDir)
@@ -122,15 +126,25 @@ export async function registerModules(
         middlewares.push(...route.rateLimit.map(createRateLimit))
       }
 
-      if (route.permission && !createPermissionGuard) {
+      if (route.auth && !route.permission && !authGuard) {
         throw new Error(
-          `Route ${routeLabel} declares permissions but createPermissionGuard is not configured`
+          `Route ${routeLabel} requires authentication but authGuard is not configured`
         )
       }
 
-      if (route.permission && createPermissionGuard) {
+      if (route.auth && !route.permission && authGuard) {
+        middlewares.push(authGuard())
+      }
+
+      if (route.permission && !permissionGuard) {
+        throw new Error(
+          `Route ${routeLabel} declares permissions but permissionGuard is not configured`
+        )
+      }
+
+      if (route.permission && permissionGuard) {
         middlewares.push(
-          createPermissionGuard({
+          permissionGuard({
             permissionArray: route.permission,
             permissionMode: route.permissionMode ?? 'any',
             getScope: route.getPermissionScope,

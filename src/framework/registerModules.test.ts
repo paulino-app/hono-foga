@@ -14,6 +14,53 @@ afterEach(() => {
 })
 
 describe('registerModules', () => {
+  test('requires and applies a guard for auth routes', async () => {
+    const modulesDir = mkdtempSync(join(tmpdir(), 'hono-foga-modules-'))
+    temporaryDirectories.push(modulesDir)
+    const moduleDir = join(modulesDir, 'account')
+    mkdirSync(moduleDir)
+    writeFileSync(
+      join(moduleDir, 'controllers.js'),
+      `export const registeredRoutes = [{
+        options: {
+          method: 'get',
+          path: '/me',
+          responses: { 200: { description: 'Success' } }
+        },
+        handler: (context) => context.json({ ok: true }),
+        auth: true
+      }]`
+    )
+
+    await expect(
+      registerModules(createRouter(), {
+        modulesDir,
+        controllersFileName: 'controllers.js'
+      })
+    ).rejects.toThrow('authGuard is not configured')
+
+    const app = createRouter()
+    await registerModules(app, {
+      modulesDir,
+      controllersFileName: 'controllers.js',
+      authGuard: () => async (context, next) => {
+        if (context.req.header('authorization') !== 'Bearer valid') {
+          return context.json({ message: 'Unauthorized' }, 401)
+        }
+        await next()
+      }
+    })
+
+    expect((await app.request('/account/me')).status).toBe(401)
+    expect(
+      (
+        await app.request('/account/me', {
+          headers: { authorization: 'Bearer valid' }
+        })
+      ).status
+    ).toBe(200)
+  })
+
   test('rejects permission routes without a guard', async () => {
     const modulesDir = mkdtempSync(join(tmpdir(), 'hono-foga-modules-'))
     temporaryDirectories.push(modulesDir)
@@ -37,7 +84,7 @@ describe('registerModules', () => {
         modulesDir,
         controllersFileName: 'controllers.js'
       })
-    ).rejects.toThrow('createPermissionGuard is not configured')
+    ).rejects.toThrow('permissionGuard is not configured')
   })
 
   test('rejects route policies without their factories', async () => {
@@ -130,7 +177,7 @@ describe('registerModules', () => {
         events.push(`rate:${config.keyPrefix}`)
         await next()
       },
-      createPermissionGuard: (config) => async (context, next) => {
+      permissionGuard: (config) => async (context, next) => {
         const scope = await config.getScope?.(context)
         events.push(
           `permission:${config.permissionMode}:${config.permissionArray[0]?.key}:${scope?.organizationId}`

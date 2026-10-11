@@ -124,7 +124,7 @@ function getRequestUrl(context: Context): string {
   }
 
   const url = new URL(context.req.url)
-  return `${url.pathname}${url.search}${url.hash}`
+  return url.pathname
 }
 
 export function createLogger(options: LoggerOptions): MiddlewareHandler {
