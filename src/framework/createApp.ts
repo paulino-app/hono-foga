@@ -3,6 +3,7 @@ import type { ErrorHandler, MiddlewareHandler, NotFoundHandler } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { compress } from 'hono/compress'
 import { cors } from 'hono/cors'
+import { secureHeaders } from 'hono/secure-headers'
 import { resolve } from 'node:path'
 import type { ConfigureOpenAPIOptions } from '../openapi/scalar.js'
 import type { BodyLimitConfig } from '../decorators/controller.js'
@@ -23,6 +24,23 @@ import type { AppOpenAPI } from './types.js'
 type MaybePromise<T> = T | Promise<T>
 export type RootResponse = Record<string, string | number | boolean | null>
 export type CreateAppOpenAPIOptions = Omit<ConfigureOpenAPIOptions, 'mode'>
+export type CreateAppSecureHeadersOptions = NonNullable<
+  Parameters<typeof secureHeaders>[0]
+>
+
+const DEFAULT_SECURE_HEADERS: CreateAppSecureHeadersOptions = {
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+  originAgentCluster: false,
+  strictTransportSecurity: false,
+  xDnsPrefetchControl: false,
+  xDownloadOptions: false,
+  xPermittedCrossDomainPolicies: false,
+  xXssProtection: false,
+  referrerPolicy: 'no-referrer',
+  xContentTypeOptions: 'nosniff',
+  xFrameOptions: 'DENY'
+}
 
 export interface CreateAppOptions extends Omit<
   RegisterModulesOptions,
@@ -33,6 +51,7 @@ export interface CreateAppOptions extends Omit<
   mode?: string
   router?: CreateRouterOptions
   bodyLimit?: false | BodyLimitConfig
+  secureHeaders?: false | CreateAppSecureHeadersOptions
   cors?: false | Parameters<typeof cors>[0]
   compression?: false | Parameters<typeof compress>[0]
   logger?: false | LoggerOptions
@@ -58,6 +77,15 @@ export default async function createApp(
       bodyLimit({
         maxSize,
         onError: (context) => context.json({ message }, 413)
+      })
+    )
+  }
+  if (options.secureHeaders !== false) {
+    app.use(
+      '*',
+      secureHeaders({
+        ...DEFAULT_SECURE_HEADERS,
+        ...options.secureHeaders
       })
     )
   }

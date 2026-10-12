@@ -60,6 +60,26 @@ const jwt = createJwt({
 const token = await jwt.sign({ id: 42 })
 ```
 
+Environment validation is declarative and fully typed. `defineEnv()` validates
+the supplied values immediately and throws `EnvironmentValidationError` with
+field-level details when startup configuration is invalid:
+
+```ts
+import { defineEnv } from 'hono-foga/framework'
+import { z } from 'zod'
+
+export const envSchema = z.object({
+  MODE: z.enum(['development', 'test', 'production']),
+  PORT: z.coerce.number().int().min(1).max(65_535).default(9000),
+  ACCESS_TOKEN_SECRET: z.string().min(32)
+})
+
+export const env = defineEnv({ schema: envSchema, values: Bun.env })
+```
+
+Omit `values` to validate `process.env`. Applications own their schema and
+defaults; `hono-foga` owns consistent parsing and startup errors.
+
 Routes can use `auth: true` when they only require a valid identity, or declare
 `permission` when they also require authorization. `registerModules` requires
 `authGuard` for auth-only routes and `permissionGuard` for permission routes;
@@ -108,12 +128,15 @@ const server = serveApp(configuredApp, {
 })
 ```
 
-Compression and a conservative 1 MiB global body ceiling are enabled by default.
-Route-specific body limits can tighten, but not raise, that ceiling. CORS,
-request logging, rate limiting, guards, bootstrap and application-specific
-routes are explicit. Modules default to `./src/app` relative to the working
-directory; use `modulesDir` to select another directory or `false` to disable
-discovery. A missing modules directory is valid.
+Compression, conservative security headers and a 1 MiB global body ceiling are
+enabled by default. The header baseline is `X-Content-Type-Options: nosniff`,
+`X-Frame-Options: DENY` and `Referrer-Policy: no-referrer`. Customize it with
+Hono's `secureHeaders` options or set `secureHeaders: false`. Route-specific body
+limits can tighten, but not raise, the global ceiling. CORS, request logging,
+rate limiting, guards, bootstrap and application-specific routes are explicit.
+Modules default to `./src/app` relative to the working directory; use
+`modulesDir` to select another directory or `false` to disable discovery. A
+missing modules directory is valid.
 
 `createApp()` only assembles the application. Start it with `Bun.serve()` or the
 `serveApp()` helper after assembly. Graceful shutdown is opt-in: when configured,

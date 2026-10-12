@@ -17,6 +17,37 @@ describe('createApp', () => {
     expect(await (await app.request('/')).json()).toEqual({ ok: true })
   })
 
+  test('applies conservative security headers by default', async () => {
+    const app = await createApp({ modulesDir: false, root: { ok: true } })
+    const response = await app.request('/')
+
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff')
+    expect(response.headers.get('x-frame-options')).toBe('DENY')
+    expect(response.headers.get('referrer-policy')).toBe('no-referrer')
+    expect(response.headers.get('strict-transport-security')).toBeNull()
+    expect(response.headers.get('cross-origin-opener-policy')).toBeNull()
+  })
+
+  test('can customize or disable security headers', async () => {
+    const customized = await createApp({
+      modulesDir: false,
+      root: { ok: true },
+      secureHeaders: { xFrameOptions: 'SAMEORIGIN' }
+    })
+    const disabled = await createApp({
+      modulesDir: false,
+      root: { ok: true },
+      secureHeaders: false
+    })
+
+    expect((await customized.request('/')).headers.get('x-frame-options')).toBe(
+      'SAMEORIGIN'
+    )
+    expect(
+      (await disabled.request('/')).headers.get('x-content-type-options')
+    ).toBeNull()
+  })
+
   test('applies a conservative global body limit', async () => {
     const app = await createApp({
       modulesDir: false,

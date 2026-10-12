@@ -2,6 +2,7 @@ export {
   default as createApp,
   type CreateAppOpenAPIOptions,
   type CreateAppOptions,
+  type CreateAppSecureHeadersOptions,
   type RootResponse
 } from './createApp.js'
 export {
@@ -15,6 +16,11 @@ export {
   type ServeAppOptions,
   type ShutdownSignal
 } from './bun.js'
+export {
+  defineEnv,
+  EnvironmentValidationError,
+  type DefineEnvOptions
+} from './env.js'
 export {
   registerModules,
   type CreateAuthGuard,
