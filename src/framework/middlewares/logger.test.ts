@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test'
+import { describe, expect, spyOn, test } from 'bun:test'
 import { Hono } from 'hono'
 import { createLogger, type LogEntry } from './logger.js'
 
@@ -28,5 +28,25 @@ describe('createLogger', () => {
     expect(entries[1]?.status).toBe(200)
     expect(entries[1]?.durationMs).toBeNumber()
     expect(entries[0]?.url).toBe('/accounts')
+  })
+
+  test('does not fail requests when the sink is unavailable', async () => {
+    const consoleError = spyOn(console, 'error').mockImplementation(() => {})
+    const app = new Hono()
+    app.use(
+      createLogger({
+        timeZone: 'UTC',
+        sink: () => {
+          throw new Error('sink unavailable')
+        }
+      })
+    )
+    app.get('/', (context) => context.text('ok'))
+
+    const response = await app.request('/')
+    consoleError.mockRestore()
+
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe('ok')
   })
 })

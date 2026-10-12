@@ -91,6 +91,7 @@ export interface LoggerOptions {
   ) => Record<string, unknown> | Promise<Record<string, unknown>>
   format?: (entry: LogEntry) => string
   sink?: LoggerSink
+  failOnSinkError?: boolean
 }
 
 function formatDuration(durationMs: number): string {
@@ -131,6 +132,14 @@ export function createLogger(options: LoggerOptions): MiddlewareHandler {
   const getCurrentTime = createGetCurrentTime(options.timeZone)
   const format = options.format ?? formatLogEntry
   const sink = options.sink ?? ((message: string) => console.log(message))
+  const write = async (entry: LogEntry) => {
+    try {
+      await sink(format(entry), entry)
+    } catch (error) {
+      if (options.failOnSinkError) throw error
+      console.error('Logger sink failed:', error)
+    }
+  }
 
   return async (context, next) => {
     if (await options.skip?.(context)) {
@@ -151,15 +160,22 @@ export function createLogger(options: LoggerOptions): MiddlewareHandler {
     })
 
     const requestEntry = await createEntry('request')
-    await sink(format(requestEntry), requestEntry)
+    await write(requestEntry)
 
     const startedAt = Date.now()
-    await next()
+    let requestError: unknown
+    try {
+      await next()
+    } catch (error) {
+      requestError = error
+    }
 
     const responseEntry = await createEntry('response', {
-      status: context.res.status,
+      status: requestError ? 500 : context.res.status,
       durationMs: Date.now() - startedAt
     })
-    await sink(format(responseEntry), responseEntry)
+    await write(responseEntry)
+
+    if (requestError) throw requestError
   }
 }

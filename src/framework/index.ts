@@ -9,6 +9,13 @@ export {
   type CreateRouterOptions
 } from './createRouter.js'
 export {
+  createGracefulShutdown,
+  serveApp,
+  type GracefulShutdownOptions,
+  type ServeAppOptions,
+  type ShutdownSignal
+} from './bun.js'
+export {
   registerModules,
   type CreateAuthGuard,
   type CreatePermissionGuard,

@@ -71,6 +71,7 @@ describe('createMemoryRateLimitFactory', () => {
 
     expect((await request('one')).status).toBe(200)
     expect((await request('two')).status).toBe(429)
+    expect((await request('one')).status).toBe(429)
 
     now += 10_000
     expect((await request('two')).status).toBe(200)

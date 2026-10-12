@@ -3,12 +3,14 @@
  * traces in production. The package stays free of environment lookups.
  */
 import type { Context, ErrorHandler } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode, StatusCode } from 'hono/utils/http-status'
 import { INTERNAL_SERVER_ERROR } from '../../data/httpStatusCodes.js'
 import { INTERNAL_SERVER_ERROR_MESSAGE } from '../../data/httpStatusMessages.js'
 
 interface ErrorWithStatus extends Error {
   status?: number
+  expose?: boolean
 }
 
 export interface ErrorReport {
@@ -19,16 +21,17 @@ export interface ErrorReport {
 
 export interface OnErrorOptions {
   mode?: string
+  exposeErrors?: boolean
   report?: (details: ErrorReport) => void | Promise<void>
 }
 
 export function createOnError(options: OnErrorOptions = {}): ErrorHandler {
-  const isDevelopment = options.mode !== 'production'
+  const exposeErrors = options.exposeErrors ?? options.mode === 'development'
 
   return async (err, context: Context) => {
     const e = err as ErrorWithStatus
 
-    if (isDevelopment) {
+    if (exposeErrors) {
       console.error('Error capturado:', e)
     }
 
@@ -43,10 +46,20 @@ export function createOnError(options: OnErrorOptions = {}): ErrorHandler {
       console.error('Error reporter failed:', reportError)
     }
 
-    const errorMessage =
-      !isDevelopment && statusCode >= INTERNAL_SERVER_ERROR
-        ? INTERNAL_SERVER_ERROR_MESSAGE
-        : e.message || INTERNAL_SERVER_ERROR_MESSAGE
+    if (
+      e instanceof HTTPException &&
+      (e.status < INTERNAL_SERVER_ERROR ||
+        exposeErrors ||
+        (e as ErrorWithStatus).expose === true)
+    ) {
+      return e.res
+        ? e.getResponse()
+        : context.json({ message: e.message }, e.status)
+    }
+
+    const errorMessage = !exposeErrors
+      ? INTERNAL_SERVER_ERROR_MESSAGE
+      : e.message || INTERNAL_SERVER_ERROR_MESSAGE
 
     return context.json(
       { message: errorMessage },

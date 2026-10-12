@@ -1,6 +1,6 @@
 # hono-foga
 
-Shared toolkit for [Hono](https://hono.dev) services running on Bun or Node: OpenAPI helpers, route decorators, a convention over configuration module loader, status codes, validation and small utilities.
+Bun-first toolkit for [Hono](https://hono.dev) services: application assembly, OpenAPI helpers, route decorators, a convention over configuration module loader, status codes, validation and small utilities.
 
 ## Install
 
@@ -51,7 +51,12 @@ JWT secrets are always explicit and empty secrets are rejected:
 ```ts
 import { createJwt } from 'hono-foga/security'
 
-const jwt = createJwt({ secret: env.ACCESS_TOKEN_SECRET })
+const jwt = createJwt({
+  secret: env.ACCESS_TOKEN_SECRET,
+  issuer: 'example-api',
+  audience: 'example-api-clients',
+  expiresInSeconds: 3600
+})
 const token = await jwt.sign({ id: 42 })
 ```
 
@@ -71,14 +76,13 @@ precedence, so `responses` can focus on successful and domain-specific cases.
 minimal module configuration or complete runtime hooks:
 
 ```ts
-import { createApp } from 'hono-foga/framework'
+import { createApp, serveApp } from 'hono-foga/framework'
 
 const app = await createApp({})
 
 const configuredApp = await createApp({
   mode: 'development',
   bootstrap: migrateDatabase,
-  port: 9000,
   cors: { origin: ['https://example.com'] },
   logger: { timeZone: 'UTC' },
   root: { name: 'Example API', version: '1.0.0' },
@@ -93,15 +97,34 @@ const configuredApp = await createApp({
     version: '1.0.0'
   }
 })
+
+const server = serveApp(configuredApp, {
+  port: 9000,
+  shutdown: {
+    timeoutMs: 10_000,
+    cleanup: closeDatabase,
+    onSignal: (signal) => console.log(`Received ${signal}`)
+  }
+})
 ```
 
-Compression and route body limits are enabled by default. CORS, request logging,
-rate limiting, guards, bootstrap and application-specific routes are explicit.
-Application modules are always loaded from `./src/app` relative to the current
-working directory.
-When `port` is present, `createApp()` starts Bun after registration completes;
-without it, the app remains in-memory for tests and scripts. Each call creates
-its own in-memory rate-limit store.
+Compression and a conservative 1 MiB global body ceiling are enabled by default.
+Route-specific body limits can tighten, but not raise, that ceiling. CORS,
+request logging, rate limiting, guards, bootstrap and application-specific
+routes are explicit. Modules default to `./src/app` relative to the working
+directory; use `modulesDir` to select another directory or `false` to disable
+discovery. A missing modules directory is valid.
+
+`createApp()` only assembles the application. Start it with `Bun.serve()` or the
+`serveApp()` helper after assembly. Graceful shutdown is opt-in: when configured,
+`serveApp()` handles `SIGTERM` and `SIGINT`, waits for active requests, forces a
+server stop after the drain timeout, and then runs the application cleanup
+callback. Cleanup should have its own finite timeouts because it is not forcibly
+cancelled. Use
+`createGracefulShutdown()` when managing a custom Bun server. The optional
+`bootstrap` callback runs after configuration and route registration succeed,
+but before `createApp()` returns. Each call creates its own in-memory rate-limit
+store.
 OpenAPI and Scalar routes are exposed by default only in `development` mode;
 `openapi.enabled` can override that behavior explicitly.
 
@@ -163,8 +186,21 @@ await registerModules(app, {
 Declaring either policy without its corresponding factory fails during startup.
 `rateLimit` accepts one configuration or an ordered array of configurations.
 The bundled in-memory factory owns counters, expiration, capacity protection,
-`429` responses and `Retry-After`. Applications still provide client identity
-resolution so proxy trust and runtime-specific connection APIs remain explicit.
+`429` responses and `Retry-After`. At capacity it clears expired buckets and
+fails closed for new identities until the nearest reset instead of evicting an
+active limit. Applications still provide client identity resolution so proxy
+trust and runtime-specific connection APIs remain explicit.
+
+## Version 2.5 migration
+
+Version 2.5 is Bun-only and contains intentional breaking changes:
+
+- `createApp()` no longer accepts `port` or starts a server.
+- JWT helpers require `issuer`, `audience`, and `expiresInSeconds`.
+- Removed decorator options that were accepted but not implemented.
+- Removed the unused `writeError` data export.
+- Unexpected errors, including 5xx `HTTPException` values, are private unless
+  development exposure or an explicit `expose` marker is used.
 
 Operational endpoints are independent middlewares, so applications control
 their order and authentication policy:

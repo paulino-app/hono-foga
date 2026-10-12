@@ -78,8 +78,9 @@ describe('createRouteRegistry', () => {
       '429',
       '500'
     ])
-    expect(registeredRoutes[0]?.options.responses[403]?.description).toBe(
-      'Custom forbidden response'
-    )
+    const forbidden = registeredRoutes[0]?.options.responses[403]
+    expect(
+      forbidden && 'description' in forbidden && forbidden.description
+    ).toBe('Custom forbidden response')
   })
 })

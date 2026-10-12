@@ -25,13 +25,7 @@ export type PermissionConfig = {
 export type PermissionMode = 'any' | 'all'
 export type PermissionScope = Record<string, unknown>
 
-export interface ControllerOptions {
-  basePath?: string
-  tags?: string[]
-  description?: string
-}
-
-export function Controller(_options: ControllerOptions = {}) {
+export function Controller() {
   return (_target: any) => {}
 }
 
@@ -96,6 +90,13 @@ export function createRouteRegistry() {
   const registeredRoutes: RegisteredRoute[] = []
 
   function Route(options: RouteOptions) {
+    if (options.permission && options.permission.length === 0) {
+      throw new TypeError('permission must not be empty')
+    }
+    if (Array.isArray(options.rateLimit) && options.rateLimit.length === 0) {
+      throw new TypeError('rateLimit must not be empty')
+    }
+
     return (
       _target: any,
       _propertyKey: string,

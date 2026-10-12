@@ -9,6 +9,7 @@
  */
 import { existsSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { createRoute, type RouteConfig } from '@hono/zod-openapi'
 import type { Context, MiddlewareHandler } from 'hono'
 import type {
@@ -71,14 +72,19 @@ export async function registerModules(
   const {
     modulesDir,
     controllersFileName = 'controllers.ts',
-    importPath = (name: string) => join(modulesDir, name, controllersFileName),
+    importPath = (name: string) =>
+      pathToFileURL(join(modulesDir, name, controllersFileName)).href,
     createBodyLimit,
     createRateLimit,
     authGuard,
     permissionGuard
   } = options
 
-  const entries = readdirSync(modulesDir)
+  if (!existsSync(modulesDir)) {
+    return
+  }
+
+  const entries = readdirSync(modulesDir).sort()
 
   for (const name of entries) {
     const modulePath = join(modulesDir, name)
@@ -96,7 +102,17 @@ export async function registerModules(
       | RegisteredRoute[]
       | undefined
 
-    if (!registeredRoutes || registeredRoutes.length === 0) {
+    if (registeredRoutes === undefined) {
+      continue
+    }
+
+    if (!Array.isArray(registeredRoutes)) {
+      throw new TypeError(
+        `${controllersFile} must export registeredRoutes as an array`
+      )
+    }
+
+    if (registeredRoutes.length === 0) {
       continue
     }
 
@@ -126,23 +142,23 @@ export async function registerModules(
         middlewares.push(...route.rateLimit.map(createRateLimit))
       }
 
-      if (route.auth && !route.permission && !authGuard) {
+      if (route.auth && !route.permission?.length && !authGuard) {
         throw new Error(
           `Route ${routeLabel} requires authentication but authGuard is not configured`
         )
       }
 
-      if (route.auth && !route.permission && authGuard) {
+      if (route.auth && !route.permission?.length && authGuard) {
         middlewares.push(authGuard())
       }
 
-      if (route.permission && !permissionGuard) {
+      if (route.permission?.length && !permissionGuard) {
         throw new Error(
           `Route ${routeLabel} declares permissions but permissionGuard is not configured`
         )
       }
 
-      if (route.permission && permissionGuard) {
+      if (route.permission?.length && permissionGuard) {
         middlewares.push(
           permissionGuard({
             permissionArray: route.permission,

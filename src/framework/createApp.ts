@@ -5,6 +5,7 @@ import { compress } from 'hono/compress'
 import { cors } from 'hono/cors'
 import { resolve } from 'node:path'
 import type { ConfigureOpenAPIOptions } from '../openapi/scalar.js'
+import type { BodyLimitConfig } from '../decorators/controller.js'
 import createRouter, { type CreateRouterOptions } from './createRouter.js'
 import { createLogger, type LoggerOptions } from './middlewares/logger.js'
 import {
@@ -28,9 +29,10 @@ export interface CreateAppOptions extends Omit<
   'modulesDir'
 > {
   bootstrap?: () => MaybePromise<void>
+  modulesDir?: string | false
   mode?: string
-  port?: number
   router?: CreateRouterOptions
+  bodyLimit?: false | BodyLimitConfig
   cors?: false | Parameters<typeof cors>[0]
   compression?: false | Parameters<typeof compress>[0]
   logger?: false | LoggerOptions
@@ -44,12 +46,21 @@ export interface CreateAppOptions extends Omit<
 }
 
 export default async function createApp(
-  options: CreateAppOptions
+  options: CreateAppOptions = {}
 ): Promise<AppOpenAPI> {
-  await options.bootstrap?.()
-
   const app = createRouter(options.router) as AppOpenAPI
 
+  if (options.bodyLimit !== false) {
+    const { maxSize = 1_048_576, message = 'Request body is too large' } =
+      options.bodyLimit ?? {}
+    app.use(
+      '*',
+      bodyLimit({
+        maxSize,
+        onError: (context) => context.json({ message }, 413)
+      })
+    )
+  }
   if (options.cors !== false && options.cors !== undefined) {
     app.use('*', cors(options.cors))
   }
@@ -78,30 +89,29 @@ export default async function createApp(
   }
   await options.configure?.(app)
 
-  await registerModules(app, {
-    modulesDir: resolve(process.cwd(), 'src', 'app'),
-    controllersFileName: options.controllersFileName,
-    importPath: options.importPath,
-    createBodyLimit:
-      options.createBodyLimit ??
-      (({ maxSize, message = 'Request body is too large' }) =>
-        bodyLimit({
-          maxSize,
-          onError: (context) => context.json({ message }, 413)
-        })),
-    createRateLimit:
-      options.createRateLimit ??
-      (options.memoryRateLimit
-        ? createMemoryRateLimitFactory(options.memoryRateLimit)
-        : undefined),
-    authGuard: options.authGuard,
-    permissionGuard: options.permissionGuard
-  })
-
-  if (options.port !== undefined) {
-    const { serve } = await import('bun')
-    serve({ fetch: app.fetch, port: options.port })
+  if (options.modulesDir !== false) {
+    await registerModules(app, {
+      modulesDir: options.modulesDir ?? resolve(process.cwd(), 'src', 'app'),
+      controllersFileName: options.controllersFileName,
+      importPath: options.importPath,
+      createBodyLimit:
+        options.createBodyLimit ??
+        (({ maxSize, message = 'Request body is too large' }) =>
+          bodyLimit({
+            maxSize,
+            onError: (context) => context.json({ message }, 413)
+          })),
+      createRateLimit:
+        options.createRateLimit ??
+        (options.memoryRateLimit
+          ? createMemoryRateLimitFactory(options.memoryRateLimit)
+          : undefined),
+      authGuard: options.authGuard,
+      permissionGuard: options.permissionGuard
+    })
   }
+
+  await options.bootstrap?.()
 
   return app
 }

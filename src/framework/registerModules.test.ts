@@ -139,6 +139,24 @@ describe('registerModules', () => {
     ).rejects.toThrow('createRateLimit is not configured')
   })
 
+  test('rejects malformed route registries', async () => {
+    const modulesDir = mkdtempSync(join(tmpdir(), 'hono-foga-modules-'))
+    temporaryDirectories.push(modulesDir)
+    const moduleDir = join(modulesDir, 'invalid')
+    mkdirSync(moduleDir)
+    writeFileSync(
+      join(moduleDir, 'controllers.js'),
+      'export const registeredRoutes = { length: 0 }'
+    )
+
+    await expect(
+      registerModules(createRouter(), {
+        modulesDir,
+        controllersFileName: 'controllers.js'
+      })
+    ).rejects.toThrow('must export registeredRoutes as an array')
+  })
+
   test('applies declarative policies in route order', async () => {
     const modulesDir = mkdtempSync(join(tmpdir(), 'hono-foga-modules-'))
     temporaryDirectories.push(modulesDir)

@@ -39,13 +39,13 @@ export function createPermissionGuardFactory<Principal>(
     return async (context, next) => {
       const principal = await options.authenticate(context)
 
-      if (principal === null) {
+      if (principal == null) {
         return options.onUnauthorized
           ? options.onUnauthorized(context)
           : context.json({ message: 'Unauthorized' }, 401)
       }
 
-      const scope = { ...((await config.getScope?.(context)) ?? {}) }
+      const scope = { ...(await config.getScope?.(context)) }
       const organizationId =
         scope.organizationId === undefined
           ? await config.getOrgId?.(context)

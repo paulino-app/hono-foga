@@ -3,8 +3,8 @@
  * @param dateExpired Fecha de expiración
  * @returns {boolean} 'true' si expiró
  */
-export function isTokenExpired(dateExpired: string) {
+export function isTokenExpired(dateExpired: string | number) {
   const expirationDate = Number(dateExpired)
   const now = Math.floor(Date.now() / 1000)
-  return now > expirationDate
+  return !Number.isFinite(expirationDate) || now >= expirationDate
 }

@@ -56,7 +56,12 @@ export function createMemoryRateLimitFactory(
         routeIdentity === null || routeIdentity === undefined
           ? await options.identifyClient(context)
           : routeIdentity
-      const key = JSON.stringify([config.keyPrefix, identity])
+      const key = JSON.stringify([
+        config.keyPrefix,
+        config.max,
+        config.windowSeconds,
+        identity
+      ])
       const current = buckets.get(key)
 
       if (!current && buckets.size >= maxBuckets) {
@@ -67,10 +72,10 @@ export function createMemoryRateLimitFactory(
         }
 
         if (buckets.size >= maxBuckets) {
-          const nextResetAt = Math.min(
-            ...Array.from(buckets.values(), (bucket) => bucket.resetAt)
+          const earliestReset = Math.min(
+            ...[...buckets.values()].map(({ resetAt }) => resetAt)
           )
-          return rateLimited(context, nextResetAt, now, options)
+          return rateLimited(context, earliestReset, now, options)
         }
       }
 
